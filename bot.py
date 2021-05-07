@@ -1,46 +1,75 @@
 import discord
+import os
+import traceback
+
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound, MissingPermissions
 
+# Bot permissions invite link
+#https://discord.com/api/oauth2/authorize?client_id=840056810488201276&permissions=808840256&scope=bot
 # ------- COGS -------
 
 COGS = [
-
+    'coggers.chara'
 ]
 
 
 class Barkeep(commands.Bot):
-    def __init__(self, prefix, description=None, testing=False, **options):
-        super().__init__(prefix, help_command=help_command, description=description, **options)
+    def __init__(self, prefix, description=None, **options):
+        super(Barkeep, self).__init__(prefix, help_command=None, description=description, **options)
         self.state = "init"
 
 intents = discord.Intents(
     guilds=True, members=True, messages=True, reactions=True
 )
 
-bot = Barkeep(prefix=get_prefix, description=desc, pm_help=True,
-    activity = discord.Game(name f'Finding next encounters... | {config.DEFAULT_PREFIX}help'),
-    allowed_mentions=discord.AllowedMentions.none(), intents=intents)
+bot = Barkeep(prefix='!', description=None, pm_help=True, activity = discord.Activity(name='Searching for more adventurers...', type=discord.ActivityType.playing), allowed_mentions=discord.AllowedMentions.none(), intents=intents)
 
 @bot.event
 async def on_ready():
-    console.log(f'Logging in as {bot.user.name} {bot.user.id}\n')
+    print(f'Logging in as {bot.user.name} {bot.user.id}\n')
 
 @bot.event
 async def on_resumed():
-    console.log('Resumed.')
+    print('Resumed.')
 
 @bot.event
-    async def on_command_error(ctx, error):
-        if isinstance(error, commands.CommandNotFound):
-            await ctx.message.add_reaction(emoji='😔')
-            return
+async def on_command_error(ctx, error):
+    msg = None
+    print(ctx.invoked_with)
+    print(error)
 
-        raise error
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.message.add_reaction(emoji='😔')
+        return
 
-for cog in COGS:
-    bot.load_extension(cog)
+    raise error
+
+def loadtoken():
+    global bot_token
+    # load globals defined in the config file
+    try:
+        with open('configs/BOT_TOKEN') as f:
+            print('loading token file for main bot')
+            bot_token = f.readline()
+            return True
+    except:
+        bot_token = os.environ.get('bot_token')
+        return True
+
+    if not loadtoken():
+        exit()
 
 if __name__ == '__main__':
+    loadtoken()
+
+    for cog in COGS:
+        try:
+            bot.load_extension(cog)
+            print('Cog {} loaded.'.format(cog))
+        except Exception as e:
+            print('Cog {} failed to load.'.format(cog))
+            traceback.print_exc()
+
     bot.state = "run"
-    bot.run(token)
+    bot.run(bot_token)
