@@ -4,7 +4,8 @@ import traceback
 
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound, MissingPermissions
-
+from configs.settings import command_prefix
+from utils import *
 # Bot permissions invite link
 #https://discord.com/api/oauth2/authorize?client_id=840056810488201276&permissions=808840256&scope=bot
 # ------- COGS -------
@@ -12,18 +13,6 @@ from discord.ext.commands import CommandNotFound, MissingPermissions
 COGS = [
     'coggers.chara'
 ]
-
-
-class Barkeep(commands.Bot):
-    def __init__(self, prefix, description=None, **options):
-        super(Barkeep, self).__init__(prefix, help_command=None, description=description, **options)
-        self.state = "init"
-
-intents = discord.Intents(
-    guilds=True, members=True, messages=True, reactions=True
-)
-
-bot = Barkeep(prefix='!', description=None, pm_help=True, activity = discord.Activity(name='Searching for more adventurers...', type=discord.ActivityType.playing), allowed_mentions=discord.AllowedMentions.none(), intents=intents)
 
 @bot.event
 async def on_ready():
