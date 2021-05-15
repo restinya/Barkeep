@@ -3,10 +3,12 @@ import asyncio
 import re
 import collections
 import d20
+import requests
 
+from time import sleep
 from discord.ext import commands
 from configs.settings import command_prefix
-from utils import accessDB, point_buy, alpha_emojis, db, VerboseMDStringifier, traceBack
+from utils import accessDB, point_buy, alpha_emojis, db, VerboseMDStringifier, traceBack, checkForChar
 
 class Character(commands.Cog):
 
@@ -40,15 +42,33 @@ class Character(commands.Cog):
                 msg = ":warning: You're missing a stat (STR, dex, con, int, wis, or cha) for the character you want to create.\n"
             elif error.param.name == 'magic_item':
                 msg = ":warning: You're missing a free item of common or uncommon rarity.\n"
+            elif error.param.name == 'url':
+                msg = ":warning: You're missing a URL to add an image to your character's information window.\n"
+            elif error.param.name == 'm':
+                msg = ":warning: You're missing a magic item to attune to, or unattune from, your character.\n"
+
             msg += "**Note: if this error seems incorrect, something else may be incorrect.**\n\n"
 
         if msg:
             if ctx.command.name == "create":
                 msg += f'Please follow this format:\n```yaml\n{command_prefix}create "name" level "race" "class" "background" STR dex con int wis cha "magic item"```\n'
+            elif ctx.command.name == "info":
+                msg += f'Please follow this format:\n```yaml\n{command_prefix}info "character name"```\n'
+            elif ctx.command.name == "image":
+                msg += f'Please follow this format:\n```yaml\n{command_prefix}image "character name" "URL"```\n'
+            elif ctx.command.name == "levelup":
+                msg += f'Please follow this format:\n```yaml\n{command_prefix}levelup "character name"```\n'
+            elif ctx.command.name == "attune":
+                msg += f'Please follow this format:\n```yaml\n{command_prefix}attune "character name" "magic item"```\n'
+            elif ctx.command.name == "unattune":
+                msg += f'Please follow this format:\n```yaml\n{command_prefix}unattune "character name" "magic item"```\n'
             ctx.command.reset_cooldown(ctx)
             await ctx.channel.send(msg)
+
+
         elif isinstance(error, commands.CommandOnCooldown):
             return
+
         elif isinstance(error, commands.CommandInvokeError):
             msg = f'The command is not working correctly. Please try again and make sure the format is correct.'
             ctx.command.reset_cooldown(ctx)
@@ -79,7 +99,7 @@ class Character(commands.Cog):
         abi_names = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
         char_dict = {
-          'userID': str(author.id),
+          'UID': str(author.id),
           'name': name,
           'level': int(level),
           'hp': 0,
@@ -107,8 +127,7 @@ class Character(commands.Cog):
           'feats': 'None',
           'inventory': {},
           'spellcasting': False,
-          'spells': {},
-          'image': ""
+          'spellbook': {}
         }
 
         if not name:
@@ -147,7 +166,21 @@ class Character(commands.Cog):
             if i in name:
                 msg += f":warning: Your character's name cannot contain `{i}`. Please revise your character name.\n"
 
+        if msg == "":
+            player_collection = db.EncountersPlayers
+            player_records = list(player_collection.find({"UID": str(author.id)}))
+            if player_records != list() and len(player_records['characters']) >= player_records['max_characters']:
+                msg += f":warning: You already have **{len(player_records['characters'])}** character(s) and may only have a maximum of {player_records['max_characters']}! You may not create a new character at this time.\n"
 
+        if msg == "":
+            query = name
+            query = query.replace('(', '\\(')
+            query = query.replace(')', '\\)')
+            query = query.replace('.', '\\.')
+            chara_collection = db.EncountersCharacters
+            chara_records = list(chara_collection.find({"UID": str(author.id), "characters.name": {"$regex": query, '$options': 'i' }}))
+            if chara_records != list():
+                msg += f":warning: You already have a character by the name of **{name}**! Please use a different name.\n"
         #==================LEVEL CHECKING=====================
         level_set = []
         for d in level_creation.keys():
@@ -308,7 +341,7 @@ class Character(commands.Cog):
 
                 if int(m['class']['subclassLevel']) <= int(m['level']) and msg == "":
                     subclasses_list = m['class']['subclasses']
-                    subclass, char_embedmsg = await character_cog.chooseSubclass(ctx, subclasses_list, m['class']['name'], char_embed, char_embedmsg)
+                    subclass, char_embedmsg = await character_cog.choose_subclass(ctx, subclasses_list, m['class']['name'], char_embed, char_embedmsg)
                     if not subclass:
                         return
 
@@ -442,12 +475,12 @@ class Character(commands.Cog):
             for c in c_record:
             #     # Wizards get 2 free spells per wizard level
             #     if cc['Class']['Name'] == "Wizard":
-            #         charDict['Free Spells'] = [6,0,0,0,0,0,0,0,0]
+            #         char_dict['Free Spells'] = [6,0,0,0,0,0,0,0,0]
             #         fsIndex = 0
             #         for i in range (2, int(cc['Level']) + 1 ):
             #             if i % 2 != 0:
             #                 fsIndex += 1
-            #             charDict['Free Spells'][fsIndex] += 2
+            #             char_dict['Free Spells'][fsIndex] += 2
 
                 hp_records.append({'level':c['level'], 'subclass': c['subclass'], 'name': c['class']['name'], 'max': c['class']['hitdie']['max'], 'avg':c['class']['hitdie']['avg']})
 
@@ -597,30 +630,7 @@ class Character(commands.Cog):
             return 
         
         print(char_dict);
-        self.bot.get_command('create').reset_cooldown(ctx)
-        
-        
-        char_embed.clear_fields()    
-        char_embed.title = f"{char_dict['name']} (Lv {char_dict['level']})"
-        char_embed.description = f"**Race**: {char_dict['race']}\n**Class**: {char_dict['class']}\n**Background**: {char_dict['background']}\n**Max HP**: {char_dict['hp']}\n**GP**: {char_dict['hp']}"
-        if char_dict['magicItems'] != 'None':
-            char_embed.add_field(name='Magic Items', value=char_dict['magicItems'], inline=False)
-        if char_dict['consumables'] != 'None':
-            char_embed.add_field(name='Consumables', value=char_dict['consumables'], inline=False)
-        char_embed.add_field(name='Renown', value=char_dict['renown'], inline=True)
-        char_embed.add_field(name='Reputation', value=char_dict['reputation'], inline=True)
-        char_embed.add_field(name='Feats', value=char_dict['feats'], inline=True)
-        char_embed.add_field(name='Stats', value=f"**STR**: {char_dict['ability']['str']} **DEX**: {char_dict['ability']['dex']} **CON**: {char_dict['ability']['con']} **INT**: {char_dict['ability']['int']} **WIS**: {char_dict['ability']['wis']} **CHA**: {char_dict['ability']['cha']}", inline=False)
-        skill_prof_string = ""
-        for k in char_dict['skillProficiencies'].keys():
-            skill_prof_string += f"• {k.capitalize()}\n"
-        char_embed.add_field(name='Skill Proficiencies', value=skill_prof_string, inline=False)
-        char_inv_string = ""
-        if char_dict['inventory'] != "None":
-            for k,v in char_dict['inventory'].items():
-                char_inv_string += f"• {k} x{v}\n"
-            char_embed.add_field(name='Starting Equipment', value=char_inv_string, inline=False)
-            char_embed.set_footer(text= char_embed.Empty)
+        await character_cog.display_char(ctx, char_embed, char_embedmsg, char_dict)
 
         if not char_embedmsg:
             char_embedmsg = await channel.send(embed=char_embed, content="**Double-check** your character information.\nIf this is correct, please react with one of the following:\n✅ to finish creating your character.\n❌ to cancel.")
@@ -657,6 +667,149 @@ class Character(commands.Cog):
                 self.bot.get_command('create').reset_cooldown(ctx)
                 return
 
+        try:
+            chara_collection.insert_one(char_dict)
+        except Exception as e:
+            print ('MONGO ERROR: ' + str(e))
+            char_embedmsg = await channel.send(embed=None, content="Uh oh, looks like something went wrong. Please try creating your character again.")
+        else:
+            print('Success')
+            if char_embedmsg:
+                await char_embedmsg.clear_reactions()
+                await char_embedmsg.edit(embed=char_embed, content =f"Congratulations! :tada: You have created **{char_dict['name']}**!")
+            else: 
+                char_embedmsg = await channel.send(embed=char_embed, content=f"Congratulations! You have created your **{char_dict['name']}**!")
+
+        self.bot.get_command('create').reset_cooldown(ctx)
+        
+    #TODO: LEVELUP
+    @commands.cooldown(1, float('inf'), type=commands.BucketType.user)
+    @commands.has_role("DM")
+    @commands.command(aliases=['lvl', 'lvlup', 'lv'])
+    async def levelup(self, ctx, char):
+        pass
+
+    @commands.cooldown(1, 5, type=commands.BucketType.member)
+    @commands.command(aliases=['img'])
+    async def image(self,ctx, char, url):
+
+        channel = ctx.channel
+        author = ctx.author
+        guild = ctx.guild
+        char_embed = discord.Embed()
+
+        info_records, char_embedmsg = await checkForChar(ctx, char, char_embed)
+
+        if info_records:
+            charID = info_records['_id']
+            data = {
+                'image': url
+            }
+
+            try:
+                r = requests.head(url)
+                if r.status_code != requests.codes.ok:
+                    await ctx.channel.send(content=f'It looks like the URL is either invalid or contains a broken image. Please follow this format:\n```yaml\n{command_prefix}image "character name" URL```\n') 
+                    return
+            except:
+                await ctx.channel.send(content=f'It looks like the URL is either invalid or contains a broken image. Please follow this format:\n```yaml\n{command_prefix}image "character name" URL```\n') 
+
+                return
+              
+            try:
+                chara_collection = db.EncountersCharacters
+                chara_collection.update_one({'_id': charID}, {"$set": data})
+            except Exception as e:
+                print ('MONGO ERROR: ' + str(e))
+                char_embedmsg = await channel.send(embed=None, content="Uh oh, looks like something went wrong. Please try creating your character again.")
+            else:
+                print('Success')
+                await ctx.channel.send(content=f'I have updated the image for ***{char}***. Please double-check using one of the following commands:\n```yaml\n{command_prefix}info "character name"\n{command_prefix}char "character name"\n{command_prefix}i "character name"```')
+
+
+    @commands.cooldown(1, 5, type=commands.BucketType.member)
+    @commands.command(aliases=['i', 'char'])
+    async def info(self,ctx, char):
+        channel = ctx.channel
+        author = ctx.author
+        guild = ctx.guild
+        char_embed = discord.Embed()
+        char_embedmsg = None
+        character_cog = self.bot.get_cog('Character')
+
+        
+        statusEmoji = ""
+        char_dict, char_embedmsg = await checkForChar(ctx, char, char_embed)
+        if char_dict:
+            footer = f"We hope you've been enjoying your time on the server!"
+            await character_cog.display_char(ctx, char_embed, char_embedmsg, char_dict)
+            char_embed.set_footer(text=footer)
+
+            if 'image' in char_dict:
+                char_embed.set_thumbnail(url=char_dict['image'])
+
+            if not char_embedmsg:
+                char_embedmsg = await ctx.channel.send(embed=char_embed)
+            else:
+                await char_embedmsg.edit(embed=char_embed)
+
+            self.bot.get_command('info').reset_cooldown(ctx)
+
+    @commands.cooldown(1, 5, type=commands.BucketType.member)
+    @commands.command()
+    async def align(self,ctx, char, *, new_align):
+        if( len(new_align) > 20 or len(new_align) <1):
+            await ctx.channel.send(content=f'The new alignment must be between 1 and 20 symbols.')
+            return
+
+    
+        channel = ctx.channel
+        author = ctx.author
+        guild = ctx.guild
+        char_embed = discord.Embed()
+
+        info_records, char_embedmsg = await checkForChar(ctx, char, char_embed)
+
+        if info_records:
+            charID = info_records['_id']
+            data = {
+                'alignment': new_align
+            }
+
+            try:
+                playersCollection = db.players
+                playersCollection.update_one({'_id': charID}, {"$set": data})
+            except Exception as e:
+                print ('MONGO ERROR: ' + str(e))
+                char_embedmsg = await channel.send(embed=None, content="Uh oh, looks like something went wrong. Please try creating your character again.")
+            else:
+                print('Success')
+                await ctx.channel.send(content=f'I have updated the alignment for ***{info_records["name"]}***. Please double-check using one of the following commands:\n```yaml\n{command_prefix}info "character name"\n{command_prefix}char "character name"\n{command_prefix}i "character name"```')
+
+
+    async def display_char(self, ctx, char_embed, char_embedmsg, char_dict):
+        char_embed.clear_fields()    
+        char_embed.title = f"{char_dict['name']} (Lv {char_dict['level']})"
+        char_embed.description = f"**Race**: {char_dict['race']}\n**Class**: {char_dict['class']}\n**Background**: {char_dict['background']}\n**Max HP**: {char_dict['hp']}\n**GP**: {char_dict['gp']}"
+        if char_dict['magicItems'] != 'None':
+            char_embed.add_field(name='Magic Items', value=char_dict['magicItems'], inline=False)
+        if char_dict['consumables'] != 'None':
+            char_embed.add_field(name='Consumables', value=char_dict['consumables'], inline=False)
+        char_embed.add_field(name='Renown', value=char_dict['renown'], inline=True)
+        char_embed.add_field(name='Reputation', value=char_dict['reputation'], inline=True)
+        char_embed.add_field(name='Feats', value=char_dict['feats'], inline=True)
+        char_embed.add_field(name='Stats', value=f"**STR**: {char_dict['ability']['str']} **DEX**: {char_dict['ability']['dex']} **CON**: {char_dict['ability']['con']} **INT**: {char_dict['ability']['int']} **WIS**: {char_dict['ability']['wis']} **CHA**: {char_dict['ability']['cha']}", inline=False)
+        skill_prof_string = ""
+        for k in char_dict['skillProficiencies'].keys():
+            skill_prof_string += f"• {k.capitalize()}\n"
+        char_embed.add_field(name='Skill Proficiencies', value=skill_prof_string, inline=False)
+        char_inv_string = ""
+        if char_dict['inventory'] != "None":
+            for k,v in char_dict['inventory'].items():
+                char_inv_string += f"• {k} x{v}\n"
+            char_embed.add_field(name='Current Inventory', value=char_inv_string, inline=False)
+            char_embed.set_footer(text= char_embed.Empty)
+    
     # async def point_buy(self, ctx, stats_array, r_record, char_embed, char_embedmsg):
     #     author = ctx.author
     #     channel = ctx.channel
@@ -787,7 +940,7 @@ class Character(commands.Cog):
     #         print(stats_array)
     #         return stats_array, char_embedmsg
 
-    async def chooseSubclass(self, ctx, subclassesList, charClass, char_embed, char_embedmsg):
+    async def choose_subclass(self, ctx, subclassesList, charClass, char_embed, char_embedmsg):
         author = ctx.author
         channel = ctx.channel
         def classEmbedCheck(r, u):
@@ -840,9 +993,9 @@ class Character(commands.Cog):
             while current_level < int(class_level):
                 char_embed.clear_fields()
                 while len(char_dict['class_data'][i]['hp_rolled']) < int(class_level):
-                        print("we entered rolling")
+                        sleep(2)
                         res = d20.roll(f"d{classes[i]['max']}mi{classes[i]['avg']}", advantage=False, stringifier=VerboseMDStringifier())
-                        char_embed.add_field(name=f"Rolling for {char_dict['class_data'][i]['name']} level {i}... ", value=str(res), inline=False)
+                        char_embed.add_field(name=f"Rolling for {char_dict['class_data'][i]['name']} level {len(char_dict['class_data'][i]['hp_rolled'])+1}... ", value=str(res), inline=False)
                         if char_embedmsg:
                             await char_embedmsg.edit(embed=char_embed)
                         else: 
@@ -890,6 +1043,10 @@ class Character(commands.Cog):
         #                         total_hp += s['HP'] * class_level
         char_embed.clear_fields()
         return total_hp
+
+    #TODO: FEATS
+    async def choose_feat(self, ctx):
+        pass
 
 def setup(bot):
     bot.add_cog(Character(bot))

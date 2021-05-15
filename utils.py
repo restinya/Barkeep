@@ -185,6 +185,69 @@ async def accessDB(ctx, api_embed="", api_embedmsg=None, table=None, query=None,
 
         return records, api_embed, api_embedmsg
 
+
+
+async def checkForChar(ctx, char, charEmbed="", authorCheck=None, mod=False, customError=False):
+    channel = ctx.channel
+    author = ctx.author
+    guild = ctx.guild
+
+    if authorCheck != None:
+        author = authorCheck
+
+    charactersCollection = db.EncountersCharacters
+
+    query = char.strip()
+    query = query.replace('(', '\\(')
+    query = query.replace(')', '\\)')
+    query = query.replace('.', '\\.')
+    if mod == True:
+        charRecords = list(charactersCollection.find({"Name": {"$regex": query, '$options': 'i' }})) 
+    else:
+        charRecords = list(charactersCollection.find({"UID": str(author.id), "name": {"$regex": query, '$options': 'i' }}))
+
+    if charRecords == list():
+        if not mod and not customError:
+            await channel.send(content=f'I was not able to find your character named "**{char}**". Please check your spelling and try again.')
+        ctx.command.reset_cooldown(ctx)
+        return None, None
+
+    else:
+        if len(charRecords) > 1:
+            infoString = ""
+            charRecords = sorted(list(charRecords), key = lambda i : i ['name'])
+            for i in range(0, min(len(charRecords), 9)):
+                infoString += f"{alpha_emojis[i]}: {charRecords[i]['name']} ({guild.get_member(int(charRecords[i]['UID']))})\n"
+            
+            def infoCharEmbedcheck(r, u):
+                sameMessage = False
+                if charEmbedmsg.id == r.message.id:
+                    sameMessage = True
+                return ((r.emoji in alpha_emojis[:min(len(charRecords), 9)]) or (str(r.emoji) == '❌')) and u == author and sameMessage
+
+            charEmbed.add_field(name=f"There seems to be multiple results for \"`{char}`\"! Please choose the correct character. If you do not see your character here, please react with ❌ and be more specific with your query.", value=infoString, inline=False)
+            charEmbedmsg = await channel.send(embed=charEmbed)
+            await charEmbedmsg.add_reaction('❌')
+
+            try:
+                tReaction, tUser = await bot.wait_for("reaction_add", check=infoCharEmbedcheck, timeout=60)
+            except asyncio.TimeoutError:
+                await charEmbedmsg.delete()
+                await channel.send('Character information timed out! Try using the command again.')
+                ctx.command.reset_cooldown(ctx)
+                return None, None
+            else:
+                if tReaction.emoji == '❌':
+                    await charEmbedmsg.edit(embed=None, content=f"Character information cancelled. Try again using the same command!")
+                    await charEmbedmsg.clear_reactions()
+                    ctx.command.reset_cooldown(ctx)
+                    return None, None
+            charEmbed.clear_fields()
+            await charEmbedmsg.clear_reactions()
+            return charRecords[alpha_emojis.index(tReaction.emoji[0])], charEmbedmsg
+
+    return charRecords[0], None
+
 def merge_records(base_record, sub_record):
     del sub_record['_id']
     del sub_record['index']
