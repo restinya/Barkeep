@@ -20,16 +20,16 @@ async def traceBack (ctx,error,silent=False):
     verbosity = 6
 
     # 'traceback' is the stdlib module, `import traceback`.
-    lines = traceback.format_exception(etype,error, trace, verbosity)
+    lines = traceback.format_exception(etype, error, trace, verbosity)
 
     # format_exception returns a list with line breaks embedded in the lines, so let's just stitch the elements together
     traceback_text = ''.join(lines)
 
-    restinya = ctx.guild.get_member(842782914114748436)
+    restinya = ctx.guild.get_member(95315786352033792)
 
     if not silent:
         await restinya.send(f"```{traceback_text}```\n")
-        await ctx.channel.send(f"Uh oh, looks like this is some unknown error I have ran into. {ctx.guild.get_member(842782914114748436).mention} has been notified.")
+        await ctx.channel.send(f"Uh oh, looks like this is some unknown error I have ran into. {restinya.mention} has been notified.")
     raise error
 
 
@@ -52,11 +52,16 @@ async def accessDB(ctx, api_embed="", api_embedmsg=None, table=None, query=None,
     """
     channel = ctx.channel
     author = ctx.author
-    if query.strip() == "":
-        return None, api_embed, api_embedmsg
 
     if table is None:
        return None, api_embed, api_embedmsg
+
+    collection = db[table]
+    if query is None:
+        return list(collection.find()), api_embed, api_embedmsg
+
+    if query.strip() == "":
+        return None, api_embed, api_embedmsg
 
     invalidChars = ["[", "]", "?", '"', "\\", "*", "$", "{", "}", "^", ">", "<", "|"]
 
@@ -64,9 +69,7 @@ async def accessDB(ctx, api_embed="", api_embedmsg=None, table=None, query=None,
         if i in query:
             await channel.send(f":warning: Please do not use `{i}` in your query. Revise your query and retry the command.\n")
             return None, api_embed, api_embedmsg
-
-    collection = db[table]
-
+            
     query = query.strip()
     query = query.replace('(', '\\(')
     query = query.replace(')', '\\)')
@@ -405,7 +408,9 @@ class VerboseMDStringifier(d20.MarkdownStringifier):
         return f"**{node.comment or 'Result'}**: {self._stringify(node.roll)}\n" \
                f"**Total**: {int(node.total)}"
 
-
+left = '\N{BLACK LEFT-POINTING TRIANGLE}'
+right = '\N{BLACK RIGHT-POINTING TRIANGLE}'
+back = '\N{LEFTWARDS ARROW WITH HOOK}'
 number_emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','0️⃣']
 alpha_emojis = ['🇦','🇧','🇨','🇩','🇪','🇫','🇬','🇭','🇮','🇯','🇰',
 '🇱','🇲','🇳','🇴','🇵','🇶','🇷','🇸','🇹','🇺','🇻','🇼','🇽','🇾','🇿']
