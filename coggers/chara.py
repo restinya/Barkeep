@@ -128,7 +128,7 @@ class Character(commands.Cog):
           'renown': 0,
           'magicItems': 'None',
           'consumables': 'None',
-          'feats': "None",
+          'feats': 'None',
           'inventory': {},
           'knownSpells': {}, #Spellcasting and Pact Magic only, let DMs handle free additional spells from features, subclass, whatever.
           'flags': {'availableFeats': 0}
@@ -267,6 +267,18 @@ class Character(commands.Cog):
             else:
                 char_dict['background'] = b_record['name']
 
+        #=======ITEM CHECKING=======
+        if msg == "":
+            i_record, char_embed, char_embedmsg = await accessDB(ctx, char_embed, char_embedmsg, 'EncountersItems', magic_item);
+            if char_embedmsg == "Fail":
+                return
+            if not i_record:
+                msg += f'• {magic_item} isn\'t on the list or it isn\'t allowed! Check your #encounters-rules and check your spelling and if you think this is an error, message Restinya.\n'
+            elif i_record['rarity'] not in ["common", "uncommon"]:
+                msg += f'• {magic_item} does not qualify for an item choice! Check your #encounters-rules and check your spelling and if you think this is an error, message Restinya.\n'
+            else:
+                char_dict['magicItems'] = [magic_item];
+                
         #=======CLASS CHECKING=======
         class_stat = []
         class_data = []
