@@ -80,7 +80,6 @@ class Character(commands.Cog):
             await traceBack(ctx,error)
 
     @commands.cooldown(1, float('inf'), type=commands.BucketType.user)
-    @commands.has_role('DM')
     @commands.command()
     async def create(self, ctx, name, level: int, race, c_class, bg, c_str: int, c_dex: int, c_con: int, c_int: int, c_wis: int, c_cha: int, magic_item=None, u_id: int=None):
         name = name.strip()
@@ -91,10 +90,6 @@ class Character(commands.Cog):
         }
         roles = [r.name for r in ctx.author.roles]
         author = ctx.author
-        if u_id:
-            player_id = u_id
-        else:
-            player_id = author.id
         guild = ctx.guild
         channel = ctx.channel
         char_embed = discord.Embed()
@@ -102,6 +97,14 @@ class Character(commands.Cog):
         char_embed.set_footer(text="React with ❌ to cancel.\nPlease react with a choice even if no reactions appear.")
         char_embedmsg = None
         abi_names = ['str', 'dex', 'con', 'int', 'wis', 'cha']
+        if u_id:
+            if not 'DM' not in ctx.author.roles:
+                await channel.send(content=":warning: The name of your character cannot be blank! Please try again.\n")
+                self.bot.get_command('create').reset_cooldown(ctx)
+                return
+            player_id = u_id
+        else:
+            player_id = author.id
         char_dict = {
           'UID': str(player_id),
           'name': name,

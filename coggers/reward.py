@@ -44,7 +44,7 @@ class Reward(commands.Cog):
             self.timer.get_command('prep').reset_cooldown(ctx)
             return 
 
-        prepEmbed = discord.Embed()
+        reward_embed = discord.Embed()
 
     @commands.cooldown(1, float('inf'), type=commands.BucketType.user)
     @commands.has_role('DM')
