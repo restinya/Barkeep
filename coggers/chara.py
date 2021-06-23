@@ -98,10 +98,6 @@ class Character(commands.Cog):
         char_embedmsg = None
         abi_names = ['str', 'dex', 'con', 'int', 'wis', 'cha']
         if u_id:
-            if not 'DM' not in ctx.author.roles:
-                await channel.send(content=":warning: The name of your character cannot be blank! Please try again.\n")
-                self.bot.get_command('create').reset_cooldown(ctx)
-                return
             player_id = u_id
         else:
             player_id = author.id
@@ -137,6 +133,11 @@ class Character(commands.Cog):
           'knownSpells': {}, #Spellcasting and Pact Magic only, let DMs handle free additional spells from features, subclass, whatever.
           'flags': {'availableFeats': 0}
         }
+
+        if 'DM' not in ctx.author.roles:
+            await channel.send(content=":warning: You cannot create a character for another user! Please try again.\n")
+            self.bot.get_command('create').reset_cooldown(ctx)
+            return
 
         if not name:
             await channel.send(content=":warning: The name of your character cannot be blank! Please try again.\n")
