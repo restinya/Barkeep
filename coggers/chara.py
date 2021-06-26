@@ -1242,6 +1242,9 @@ class Character(commands.Cog):
         char_stats = char_dict['ability']
         character_cog = self.bot.get_cog('Character')
 
+        if char_dict['flags']['availableFeats'] > 0:
+            return None, None, None
+
         if 'maxAbility' not in char_dict:
             char_dict['maxAbility'] = {'str':20, 'dex':20, 'con':20, 'int':20, 'wis':20, 'cha':20}
 
