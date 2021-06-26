@@ -269,7 +269,7 @@ class Character(commands.Cog):
 
         #=======ITEM CHECKING=======
         if msg == "":
-            i_record, char_embed, char_embedmsg = await accessDB(ctx, char_embed, char_embedmsg, 'EncountersItems', magic_item);
+            i_record, char_embed, char_embedmsg = await accessDB(ctx, char_embed, char_embedmsg, 'EncountersMagicItems', magic_item);
             if char_embedmsg == "Fail":
                 return
             if not i_record:

@@ -1,4 +1,4 @@
-version: '3.4'
+version: '3.8'
 
 services:
   barkeep:
@@ -6,3 +6,11 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    environment:
+      BOT_TOKEN: /var/run/secrets/discord_bot_token
+    secrets:
+      - BOT_TOKEN
+      
+secrets:
+  BOT_TOKEN:
+    file: ./configs/BOT_TOKEN

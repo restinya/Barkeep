@@ -36,7 +36,7 @@ class Item(commands.Cog):
             elif error.param.name == "buyItem":
                 msg = "You're missing the item you want to buy/sell in the command.\n"
             elif error.param.name == "spellName":
-                msg = "You're missing the spell you want to copy in the command.\n"
+                msg = "You're missing the spell you want in the command.\n"
         elif isinstance(error, commands.CheckFailure):
             msg = "This channel or user does not have permission for this command. "
         elif isinstance(error, commands.BadArgument):
