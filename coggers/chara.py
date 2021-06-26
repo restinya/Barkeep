@@ -401,7 +401,7 @@ class Character(commands.Cog):
                     if key == 'choose':
                         for i in range(r_record['skillProficiencies'][0]['choose']['count']):
                             skill_choices = r_record['skillProficiencies'][0]['choose']['from']
-                            skill_choices = [x for x in skill_choices if x not in list(char_dict['skillProficiencies'].keys())]
+                            skill_choices = [x for x in skill_choices if x not in char_dict['skillProficiencies']]
                             alphaIndex = len(skill_choices)
                             skill_choice_string = ""
                             for num in range(len(skill_choices)):
@@ -961,39 +961,6 @@ class Character(commands.Cog):
 
         if r_record:
             stats_bonus = r_record['ability'][0]
-
-            if 'choose' in stats_bonus:
-                unique_array = stats_bonus['choose']['from']
-                for i in range(stats_bonus['choose']['count']):
-                    skill_choice_string = ""
-                    for num in range(len(unique_array)):
-                        skill_choice_string += f'{alpha_emojis[num]}: {unique_array[num].upper()}\n'
-                    try:
-                        char_embed.add_field(name=f"The {r_record['name']} race lets you choose between the following stats. React below with the stat(s) you would like to choose.", value=skill_choice_string, inline=False)
-                        if char_embedmsg:
-                            await char_embedmsg.edit(embed=char_embed)
-                        else: 
-                            char_embedmsg = await channel.send(embed=char_embed)
-                        for num in range(0,len(unique_array)): await char_embedmsg.add_reaction(alpha_emojis[num])
-                        await char_embedmsg.add_reaction('❌')
-                        tReaction, tUser = await self.bot.wait_for("reaction_add", check=slashCharEmbedcheck, timeout=60)
-                    except asyncio.TimeoutError:
-                        await char_embedmsg.delete()
-                        await channel.send(create_cancel)
-                        self.bot.get_command(ctx.invoked_with).reset_cooldown(ctx)
-                        return None, None
-                    else:
-                        if tReaction.emoji == '❌':
-                            await char_embedmsg.edit(embed=None, content=create_cancel)
-                            await char_embedmsg.clear_reactions()
-                            self.bot.get_command(ctx.invoked_with).reset_cooldown(ctx)
-                            return None, None
-                    await char_embedmsg.clear_reactions()
-                    char_embed.clear_fields()
-                    stats_bonus[unique_array[alpha_emojis.index(tReaction.emoji)]] = stats_bonus['choose'].get('amount') or 1
-                    unique_array.pop(alpha_emojis.index(tReaction.emoji))
-                del stats_bonus['choose']
-
             try:
                 char_embed.add_field(name=f"This server allows the use of the Origin Customization optional rule from Tasha's. If you wish to do customize your ability scores, please react with ✅ else ❌ to proceed with standard ability scores.", value="✅: Customize Scores\n❌: Standard Scores", inline=False)
                 if char_embedmsg:
@@ -1047,6 +1014,92 @@ class Character(commands.Cog):
                 if tReaction.emoji == '❌':
                     await char_embedmsg.clear_reactions()
                     char_embed.clear_fields()
+
+                    if 'choose' in stats_bonus:
+                        unique_array = stats_bonus['choose']['from']
+                        for i in range(stats_bonus['choose']['count']):
+                            skill_choice_string = ""
+                            for num in range(len(unique_array)):
+                                skill_choice_string += f'{alpha_emojis[num]}: {unique_array[num].upper()}\n'
+                            try:
+                                char_embed.add_field(name=f"The {r_record['name']} race lets you choose between the following stats. React below with the stat(s) you would like to choose.", value=skill_choice_string, inline=False)
+                                if char_embedmsg:
+                                    await char_embedmsg.edit(embed=char_embed)
+                                else: 
+                                    char_embedmsg = await channel.send(embed=char_embed)
+                                for num in range(0,len(unique_array)): await char_embedmsg.add_reaction(alpha_emojis[num])
+                                await char_embedmsg.add_reaction('❌')
+                                tReaction, tUser = await self.bot.wait_for("reaction_add", check=slashCharEmbedcheck, timeout=60)
+                            except asyncio.TimeoutError:
+                                await char_embedmsg.delete()
+                                await channel.send(create_cancel)
+                                self.bot.get_command(ctx.invoked_with).reset_cooldown(ctx)
+                                return None, None
+                            else:
+                                if tReaction.emoji == '❌':
+                                    await char_embedmsg.edit(embed=None, content=create_cancel)
+                                    await char_embedmsg.clear_reactions()
+                                    self.bot.get_command(ctx.invoked_with).reset_cooldown(ctx)
+                                    return None, None
+                            await char_embedmsg.clear_reactions()
+                            char_embed.clear_fields()
+                            stats_bonus[unique_array[alpha_emojis.index(tReaction.emoji)]] = stats_bonus['choose'].get('amount') or 1
+                            unique_array.pop(alpha_emojis.index(tReaction.emoji))
+                        del stats_bonus['choose']
+
+            # try:
+            #     char_embed.add_field(name=f"This server allows the use of the Origin Customization optional rule from Tasha's. If you wish to do customize your ability scores, please react with ✅ else ❌ to proceed with standard ability scores.", value="✅: Customize Scores\n❌: Standard Scores", inline=False)
+            #     if char_embedmsg:
+            #         await char_embedmsg.edit(embed=char_embed)
+            #     else: 
+            #         char_embedmsg = await channel.send(embed=char_embed)
+            #     await char_embedmsg.add_reaction('✅')
+            #     await char_embedmsg.add_reaction('❌')
+            #     tReaction, tUser = await self.bot.wait_for("reaction_add", check=confirmCheck, timeout=60)
+            # except asyncio.TimeoutError:
+            #     await char_embedmsg.delete()
+            #     await channel.send(f'Character creation timed out! Try again using the same command:\n```yaml\n{command_prefix}create "character name" level "race" "class" "background" STR dex con int wis cha```')
+            #     self.bot.get_command(ctx.invoked_with).reset_cooldown(ctx)
+            #     return None, None
+            # else:
+            #     if tReaction.emoji == '✅':
+            #         await char_embedmsg.clear_reactions()
+            #         char_embed.clear_fields()
+            #         unique_array = ['str', 'dex', 'con', 'int', 'wis', 'cha']
+            #         bonuses = stats_bonus.values()
+            #         stats_bonus = {}
+            #         for i in bonuses:
+            #             skill_choice_string = ""
+            #             for num in range(len(unique_array)):
+            #                 skill_choice_string += f'{alpha_emojis[num]}: {unique_array[num].upper()}\n'
+            #             try:
+            #                 char_embed.add_field(name=f"React below with the stat you would like to give +{i}.", value=skill_choice_string, inline=False)
+            #                 if char_embedmsg:
+            #                     await char_embedmsg.edit(embed=char_embed)
+            #                 else: 
+            #                     char_embedmsg = await channel.send(embed=char_embed)
+            #                 for num in range(0,len(unique_array)): await char_embedmsg.add_reaction(alpha_emojis[num])
+            #                 await char_embedmsg.add_reaction('❌')
+            #                 tReaction, tUser = await self.bot.wait_for("reaction_add", check=slashCharEmbedcheck, timeout=60)
+            #             except asyncio.TimeoutError:
+            #                 await char_embedmsg.delete()
+            #                 await channel.send(f'Character creation timed out! Try again using the same command:\n```yaml\n{command_prefix}create "character name" level "race" "class" "background" STR dex con int wis cha```')
+            #                 self.bot.get_command(ctx.invoked_with).reset_cooldown(ctx)
+            #                 return None, None
+            #             else:
+            #                 if tReaction.emoji == '❌':
+            #                     await char_embedmsg.edit(embed=None, content=f'Character creation cancelled. Try again using the same command:\n```yaml\n{command_prefix}create "character name" level "race" "class" "background" STR dex con int wis cha```')
+            #                     await char_embedmsg.clear_reactions()
+            #                     self.bot.get_command(ctx.invoked_with).reset_cooldown(ctx)
+            #                     return None, None
+            #             await char_embedmsg.clear_reactions()
+            #             char_embed.clear_fields()
+            #             stats_bonus[unique_array[alpha_emojis.index(tReaction.emoji)]] = i
+            #             unique_array.pop(alpha_emojis.index(tReaction.emoji))
+
+            #     if tReaction.emoji == '❌':
+            #         await char_embedmsg.clear_reactions()
+            #         char_embed.clear_fields()
             
             print(stats_array)
             print(stats_bonus)
