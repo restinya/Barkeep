@@ -536,34 +536,34 @@ class Character(commands.Cog):
                         skill_choices = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Combat', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival']
                         skill_choices = [x for x in skill_choices if x not in char_dict['skillProficiencies']]
                         alphaIndex = len(skill_choices)
-                    skill_choice_string = ""
-                    for num in range(len(skill_choices)):
-                        skill_choice_string += f'{alpha_emojis[num]}: {skill_choices[num].capitalize()}\n'
-                    try:
-                        char_embed.add_field(name=f"Your background allows the choice of a skill proficiency as you already have this proficiency from another source. React below with the skill you would like to give proficiency.", value=skill_choice_string, inline=False)
-                        if char_embedmsg:
-                            await char_embedmsg.edit(embed=char_embed)
-                        else: 
-                            char_embedmsg = await channel.send(embed=char_embed)
-                        await char_embedmsg.add_reaction('❌')
-                        tReaction, tUser = await self.bot.wait_for("reaction_add", check=alphaEmbedCheck, timeout=60)
-                    except asyncio.TimeoutError:
-                        await char_embedmsg.delete()
-                        await channel.send(create_cancel)
-                        self.bot.get_command(ctx.invoked_with).reset_cooldown(ctx)
-                        return None, None
-                    else:
-                        if tReaction.emoji == '❌':
-                            await char_embedmsg.edit(embed=None, content=create_cancel)
-                            await char_embedmsg.clear_reactions()
+                        skill_choice_string = ""
+                        for num in range(len(skill_choices)):
+                            skill_choice_string += f'{alpha_emojis[num]}: {skill_choices[num].capitalize()}\n'
+                        try:
+                            char_embed.add_field(name=f"Your background allows the choice of a skill proficiency as you already have this proficiency from another source. React below with the skill you would like to give proficiency.", value=skill_choice_string, inline=False)
+                            if char_embedmsg:
+                                await char_embedmsg.edit(embed=char_embed)
+                            else: 
+                                char_embedmsg = await channel.send(embed=char_embed)
+                            await char_embedmsg.add_reaction('❌')
+                            tReaction, tUser = await self.bot.wait_for("reaction_add", check=alphaEmbedCheck, timeout=60)
+                        except asyncio.TimeoutError:
+                            await char_embedmsg.delete()
+                            await channel.send(create_cancel)
                             self.bot.get_command(ctx.invoked_with).reset_cooldown(ctx)
                             return None, None
-                            await char_embedmsg.clear_reactions()
-                            char_embed.clear_fields()
-                            char_dict['skillProficiencies'].append(skill_choices[alpha_emojis.index(tReaction.emoji)])
-                            skill_choices.pop(alpha_emojis.index(tReaction.emoji))
                         else:
-                            char_dict['skillProficiencies'].append(i)
+                            if tReaction.emoji == '❌':
+                                await char_embedmsg.edit(embed=None, content=create_cancel)
+                                await char_embedmsg.clear_reactions()
+                                self.bot.get_command(ctx.invoked_with).reset_cooldown(ctx)
+                                return None, None
+                        await char_embedmsg.clear_reactions()
+                        char_embed.clear_fields()
+                        char_dict['skillProficiencies'].append(skill_choices[alpha_emojis.index(tReaction.emoji)])
+                        skill_choices.pop(alpha_emojis.index(tReaction.emoji))
+                    else:
+                        char_dict['skillProficiencies'].append(i)
 
         #=======FINAL STAT ADJUSTMENTS=======
         if msg == "":
