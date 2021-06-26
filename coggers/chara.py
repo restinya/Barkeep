@@ -134,7 +134,7 @@ class Character(commands.Cog):
           'flags': {'availableFeats': 0}
         }
 
-        if ctx.author.id not in dm_ids:
+        if u_id and ctx.author.id not in dm_ids:
             await channel.send(content=":warning: You cannot create a character for another user! Please try again.\n")
             self.bot.get_command('create').reset_cooldown(ctx)
             return
