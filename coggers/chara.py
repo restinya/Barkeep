@@ -604,8 +604,7 @@ class Character(commands.Cog):
                 if int(c['level']) > 18:
                     char_dict['flags']['availableFeats'] += 1
             
-            if char_dict['flags']['availableFeats'] > 0:
-                feats, asi, char_embed = await character_cog.choose_feat(ctx, char_embed, char_embedmsg, char_dict)
+            feats, asi, char_embed = await character_cog.choose_feat(ctx, char_embed, char_embedmsg, char_dict)
 
             if not feats and not asi and not char_embed:
                 return
