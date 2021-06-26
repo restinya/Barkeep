@@ -980,8 +980,14 @@ class Character(commands.Cog):
                     await char_embedmsg.clear_reactions()
                     char_embed.clear_fields()
                     unique_array = ['str', 'dex', 'con', 'int', 'wis', 'cha']
-                    bonuses = stats_bonus.values()
-                    stats_bonus = {}
+                    bonuses = []
+                    for i in stats_bonuses:
+                        if i == 'choose':
+                            for j in range(i['count']):
+                                bonuses.append(i.get('amount') or 1)
+                        else:
+                            bonuses.append(stats_bonuses[i])
+                    stats_bonuses = {}
                     for i in bonuses:
                         skill_choice_string = ""
                         for num in range(len(unique_array)):
