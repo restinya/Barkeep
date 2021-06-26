@@ -435,7 +435,7 @@ class Character(commands.Cog):
             if 'choose' in c_record[0]['class']['skillProficiencies'][0]:
                 skill_choices = list(c_record[0]['class']['skillProficiencies'][0]['choose'].keys())
                 #remove already owned skills from choice list
-                skill_choices = [x for x in skill_choices if x not in list(char_dict['skillProficiencies'].keys())]
+                skill_choices = [x for x in skill_choices if x not in char_dict['skillProficiencies']]
                 for i in range(c_record[0]['class']['skillProficiencies'][0]['count']):
                     alphaIndex = len(skill_choices)
                     skill_choice_string = ""
@@ -532,9 +532,9 @@ class Character(commands.Cog):
                     char_dict['skillProficiencies'].append(skill_choices[alpha_emojis.index(tReaction.emoji)])
                     skill_choices.pop(alpha_emojis.index(tReaction.emoji))
                 else:
-                    if char_dict['skillProficiencies'][i] == True:
+                    if i in char_dict['skillProficiencies']:
                         skill_choices = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Combat', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival']
-                        skill_choices = [x for x in skill_choices if x not in list(char_dict['skillProficiencies'].keys())]
+                        skill_choices = [x for x in skill_choices if x not in char_dict['skillProficiencies']]
                         alphaIndex = len(skill_choices)
                     skill_choice_string = ""
                     for num in range(len(skill_choices)):
@@ -981,13 +981,13 @@ class Character(commands.Cog):
                     char_embed.clear_fields()
                     unique_array = ['str', 'dex', 'con', 'int', 'wis', 'cha']
                     bonuses = []
-                    for i in stats_bonuses:
+                    for i in stats_bonus:
                         if i == 'choose':
-                            for j in range(i['count']):
-                                bonuses.append(i.get('amount') or 1)
+                            for j in range(stats_bonus[i]['count']):
+                                bonuses.append(stats_bonus[i].get('amount') or 1)
                         else:
-                            bonuses.append(stats_bonuses[i])
-                    stats_bonuses = {}
+                            bonuses.append(stats_bonus[i])
+                    stats_bonus = {}
                     for i in bonuses:
                         skill_choice_string = ""
                         for num in range(len(unique_array)):
