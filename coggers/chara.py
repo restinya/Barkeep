@@ -7,7 +7,7 @@ import requests
 
 from time import sleep
 from discord.ext import commands
-from configs.settings import command_prefix
+from configs.settings import command_prefix, dm_ids
 from utils import *
 
 class Character(commands.Cog):
@@ -118,8 +118,8 @@ class Character(commands.Cog):
             'wis': int(c_wis),
             'cha': int(c_cha),
           },
-          'skillProficiencies': {},
-          'skillExpertises': {},
+          'skillProficiencies': [],
+          'skillExpertises': [],
           'resistances': [],
           'deity': 'Unknown',
           'alignment': 'Unknown',
@@ -134,7 +134,7 @@ class Character(commands.Cog):
           'flags': {'availableFeats': 0}
         }
 
-        if 'DM' not in ctx.author.roles:
+        if ctx.author.id not in dm_ids:
             await channel.send(content=":warning: You cannot create a character for another user! Please try again.\n")
             self.bot.get_command('create').reset_cooldown(ctx)
             return
@@ -427,10 +427,10 @@ class Character(commands.Cog):
                                     return None, None
                             await char_embedmsg.clear_reactions()
                             char_embed.clear_fields()
-                            char_dict['skillProficiencies'][skill_choices[alpha_emojis.index(tReaction.emoji)]] = True
+                            char_dict['skillProficiencies'].append(skill_choices[alpha_emojis.index(tReaction.emoji)])
                             skill_choices.pop(alpha_emojis.index(tReaction.emoji))
                     else:
-                        char_dict['skillProficiencies'][key] = True
+                        char_dict['skillProficiencies'].append(key)
 
             if 'choose' in c_record[0]['class']['skillProficiencies'][0]:
                 skill_choices = list(c_record[0]['class']['skillProficiencies'][0]['choose'].keys())
@@ -462,7 +462,7 @@ class Character(commands.Cog):
                             return None, None
                     await char_embedmsg.clear_reactions()
                     char_embed.clear_fields()
-                    char_dict['skillProficiencies'][skill_choices[alpha_emojis.index(tReaction.emoji)]] = True
+                    char_dict['skillProficiencies'].append(skill_choices[alpha_emojis.index(tReaction.emoji)])
                     skill_choices.pop(alpha_emojis.index(tReaction.emoji))
 
             if len(c_record)>1:
@@ -497,7 +497,7 @@ class Character(commands.Cog):
                                     return None, None
                             await char_embedmsg.clear_reactions()
                             char_embed.clear_fields()
-                            char_dict['skillProficiencies'][skill_choices[alpha_emojis.index(tReaction.emoji)]] = True
+                            char_dict['skillProficiencies'].append(skill_choices[alpha_emojis.index(tReaction.emoji)])
                             skill_choices.pop(alpha_emojis.index(tReaction.emoji))
 
             for i in list(b_record['skillProficiencies'][0].keys()):
@@ -529,7 +529,7 @@ class Character(commands.Cog):
                             return None, None
                     await char_embedmsg.clear_reactions()
                     char_embed.clear_fields()
-                    char_dict['skillProficiencies'][skill_choices[alpha_emojis.index(tReaction.emoji)]] = True
+                    char_dict['skillProficiencies'].append(skill_choices[alpha_emojis.index(tReaction.emoji)])
                     skill_choices.pop(alpha_emojis.index(tReaction.emoji))
                 else:
                     if char_dict['skillProficiencies'][i] == True:
@@ -560,10 +560,10 @@ class Character(commands.Cog):
                             return None, None
                             await char_embedmsg.clear_reactions()
                             char_embed.clear_fields()
-                            char_dict['skillProficiencies'][skill_choices[alpha_emojis.index(tReaction.emoji)]] = True
+                            char_dict['skillProficiencies'].append(skill_choices[alpha_emojis.index(tReaction.emoji)])
                             skill_choices.pop(alpha_emojis.index(tReaction.emoji))
                         else:
-                            char_dict['skillProficiencies'][i] = True
+                            char_dict['skillProficiencies'].append(i)
 
         #=======FINAL STAT ADJUSTMENTS=======
         if msg == "":
@@ -933,7 +933,7 @@ class Character(commands.Cog):
         char_embed.add_field(name='Feats', value=char_dict['feats'], inline=True)
         char_embed.add_field(name='Stats', value=f"**STR**: {char_dict['ability']['str']} **DEX**: {char_dict['ability']['dex']} **CON**: {char_dict['ability']['con']} **INT**: {char_dict['ability']['int']} **WIS**: {char_dict['ability']['wis']} **CHA**: {char_dict['ability']['cha']}", inline=False)
         skill_prof_string = ""
-        for k in char_dict['skillProficiencies'].keys():
+        for k in char_dict['skillProficiencies']:
             skill_prof_string += f"• {k.capitalize()}\n"
         char_embed.add_field(name='Skill Proficiencies', value=skill_prof_string, inline=False)
         char_inv_string = ""
